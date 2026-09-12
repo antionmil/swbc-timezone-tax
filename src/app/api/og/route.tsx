@@ -132,6 +132,12 @@ export async function GET(req: Request) {
       width: 1200,
       height: 630,
       fonts: font ? [{ name: "Display", data: font, style: "normal", weight: 700 }] : [],
+      /* Without this the image is regenerated for every crawler that looks at
+         a shared link, font fetch and all, and the route measures MISS on
+         every request. The picture only changes when a clock changes. */
+      headers: {
+        "cache-control": "public, max-age=0, s-maxage=86400, stale-while-revalidate=604800",
+      },
     },
   );
 }

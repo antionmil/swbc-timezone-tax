@@ -183,9 +183,11 @@ export function buildVerdict(
   }
 
   const summary =
-    shared === 0
-      ? `${yourCity} and ${theirCity} never share a working hour`
-      : `${yourCity} and ${theirCity} share ${niceHours(shared)} hour${shared === 1 ? "" : "s"} a day`;
+    you === them
+      ? `No timezone tax in ${yourCity}`
+      : shared === 0
+        ? `${yourCity} and ${theirCity} never share a working hour`
+        : `${yourCity} and ${theirCity} share ${niceHours(shared)} hour${shared === 1 ? "" : "s"} a day`;
 
   return { you, them, hours, ymd, today, year, gapLine, headline, lede, stats, stretch, yearNote, summary };
 }

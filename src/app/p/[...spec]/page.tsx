@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Masthead, Colophon } from "@/components/Chrome";
 import { Tax } from "@/components/Tax";
 import { EXAMPLES } from "@/lib/examples";
-import { DEFAULT_HOURS, clock } from "@/lib/tz";
+import { DEFAULT_HOURS } from "@/lib/tz";
 import type { Hours } from "@/lib/tz";
 import { buildVerdict } from "@/lib/verdict";
 import { cityOf, slugOf, zoneFromSlug } from "@/lib/zones";
@@ -75,24 +75,12 @@ export default async function Pair({ params }: { params: Promise<{ spec: string[
   if (!parsed) notFound();
 
   const ymd = today();
-  const v = buildVerdict(parsed.you, parsed.them, ymd, parsed.hours);
   const others = EXAMPLES.filter(([a, b]) => a !== parsed.you || b !== parsed.them).slice(0, 6);
 
   return (
     <main className="mx-auto flex max-w-4xl flex-col gap-10 px-5 py-10 sm:px-8 sm:py-14">
       <Masthead />
       <Tax initial={{ ...parsed, ymd }} />
-
-      {/* Plain text for anything that does not run JavaScript, and a
-          straight answer for anyone who arrives from a shared link. */}
-      <section className="sr-only">
-        <h2>{v.summary}</h2>
-        <p>
-          {v.gapLine} {v.lede} A working day of {clock(parsed.hours.start)} to{" "}
-          {clock(parsed.hours.end)} in {cityOf(parsed.you)} and in {cityOf(parsed.them)} leaves{" "}
-          {v.stats[0].value} together. {v.yearNote}
-        </p>
-      </section>
 
       <section className="flex flex-col gap-4 border-t border-rule pt-9">
         <h2 className="text-[11px] tracking-[0.14em] text-muted uppercase">Another pair</h2>
