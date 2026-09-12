@@ -41,14 +41,32 @@ link is rendered — the same module both times, so the two cannot disagree.
 `/p/europe-paris--america-new-york` is the whole state. A working day other
 than 09:00–17:00 adds a second segment: `/p/europe-paris--america-new-york/8-20`.
 
-## The zone list is frozen
+## Picking a place
 
-`src/lib/zones.data.ts` is a snapshot of `Intl.supportedValuesOf("timeZone")`.
-It is frozen because Node and the browsers disagree about which alias is
-canonical — Chrome says `America/Argentina/Buenos_Aires`, Node says
-`America/Buenos_Aires` — and a menu built from the live runtime renders
-different options on the server and in the browser, which React treats as a
-hydration error.
+417 cities is a list nobody scrolls, and what people know is the COUNTRY —
+"they are in Germany" — not which city the IANA database happens to name the
+zone after. So the two place fields are typed into, they take either, and
+every row shows both.
+
+There is no zone-to-country API, only country-to-zones. `scripts/zones.mjs`
+asks every possible ISO region code for its timezones
+(`new Intl.Locale("und-FR").getTimeZones()`), reverses the answer and writes
+`src/lib/zones.data.ts`. All 417 zones are covered and the country names come
+from `Intl.DisplayNames`, so no country list is maintained by hand and nothing
+is fetched at runtime. Re-run it when the bundled tzdata moves on.
+
+Matches are RANKED, not filtered, and the ranking is the whole feature. An
+informal country name wins outright — otherwise "usa" answers Jerusalem and
+Lusaka, which both contain the letters, and "uk" answers Ukraine before
+London. Then an exact city, then a city prefix, then a country prefix. Without
+that, "ind" answers Indianapolis before India and "par" answers Paramaribo
+before Paris. Accents are folded, so `são paulo` and `sao paulo` both work.
+
+That list is frozen into the bundle rather than read from the runtime, because
+Node and the browsers disagree about which alias is canonical — Chrome says
+`America/Argentina/Buenos_Aires`, Node says `America/Buenos_Aires` — and a
+list built live differs between the server and the browser, which React treats
+as a hydration error.
 
 The frozen list carries the old spellings (`Asia/Calcutta`, `Europe/Kiev`),
 because IANA identifiers are never renamed once issued. `RENAMED` in

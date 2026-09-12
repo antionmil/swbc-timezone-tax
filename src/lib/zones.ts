@@ -4,7 +4,7 @@
  * frozen and not read from the runtime). Everything else here is naming and
  * URL handling. */
 
-import { ZONES } from "./zones.data";
+import { COUNTRY, COUNTRY_NAME, ZONES } from "./zones.data";
 
 export const ALL = ZONES;
 
@@ -35,6 +35,9 @@ export const cityOf = (zone: string) =>
 /** "America/Argentina/Buenos_Aires" -> "America · Argentina" */
 export const regionOf = (zone: string) =>
   zone.split("/").slice(0, -1).join(" · ").replace(/_/g, " ") || "Worldwide";
+
+/** "Europe/Paris" -> "France" */
+export const countryOf = (zone: string) => COUNTRY_NAME[COUNTRY[zone]] ?? regionOf(zone);
 
 export const REGIONS = [...new Set(ALL.map((z) => z.split("/")[0]))].sort();
 
@@ -113,3 +116,111 @@ export const COMMON: string[] = [
 ]
   .map((name) => zoneFromSlug(name))
   .filter((z): z is string => z !== null);
+
+/* ---------------------------------------------------------------- search --
+ *
+ * The list is 417 cities nobody can scroll, so the field is typed into. What
+ * people type is a country — "germany", not "Europe/Busingen" — which is why
+ * the country map is generated at all.
+ */
+
+/** Fold accents, so "sao paulo" finds São Paulo and "turkiye" finds Türkiye. */
+const fold = (text: string) =>
+  text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+/* CLDR gives one name per country and it is the formal one. Nobody looking
+   for a New York colleague types "United States", and Türkiye is spelled
+   Turkey by most of the people searching for it. */
+const ALIASES: Record<string, string> = {
+  US: "usa us america states",
+  GB: "uk britain england scotland wales northern ireland",
+  AE: "uae emirates",
+  NL: "holland",
+  CZ: "czech republic",
+  TR: "turkey",
+  CI: "ivory coast",
+  MM: "burma",
+  KR: "korea",
+  CH: "swiss",
+  VA: "holy see",
+  RU: "russian federation",
+};
+
+type Entry = {
+  zone: string;
+  city: string;
+  country: string;
+  /** the informal names for this country, as separate words */
+  aliases: string[];
+  terms: string;
+  common: boolean;
+};
+
+let index: Entry[] | null = null;
+
+function entries(): Entry[] {
+  if (index) return index;
+  const common = new Set(COMMON);
+  index = ALL.map((zone) => {
+    const city = cityOf(zone);
+    const country = countryOf(zone);
+    const code = COUNTRY[zone];
+    const aliases = fold(ALIASES[code] ?? "").split(" ").filter(Boolean);
+    return {
+      zone,
+      city,
+      country,
+      aliases,
+      terms: fold(`${city} ${country} ${zone.replace(/[/_]/g, " ")} ${aliases.join(" ")}`),
+      common: common.has(zone),
+    };
+  });
+  return index;
+}
+
+export type Match = { zone: string; city: string; country: string };
+
+/* Ranked, not filtered. A city whose name STARTS with what has been typed is
+   what the typist meant; a country match comes next; anything else is a
+   fallback. Without the ranking, typing "ind" answers Indianapolis before
+   India, and "par" answers Paramaribo before Paris. */
+export function searchZones(query: string, limit = 60): Match[] {
+  const q = fold(query);
+  const all = entries();
+  const pool = q ? all : all.filter((e) => e.common);
+
+  const scored = pool
+    .map((e) => {
+      if (!q) return { e, score: 0 };
+      const city = fold(e.city);
+      const country = fold(e.country);
+      if (city === q) return { e, score: 0 };
+      /* An informal country name beats everything except an exact city,
+         because it can only have been typed on purpose. Ranked below the city
+         prefix instead, "usa" answers Jerusalem and Lusaka — both of which
+         contain the letters — and "uk" answers Ukraine before London. */
+      if (e.aliases.includes(q)) return { e, score: 1 };
+      if (city.startsWith(q)) return { e, score: 2 };
+      if (country.startsWith(q)) return { e, score: 3 };
+      if (e.aliases.some((a) => a.startsWith(q))) return { e, score: 4 };
+      if (city.includes(q)) return { e, score: 5 };
+      if (country.includes(q)) return { e, score: 6 };
+      if (e.terms.includes(q)) return { e, score: 7 };
+      return { e, score: -1 };
+    })
+    .filter((x) => x.score >= 0);
+
+  scored.sort(
+    (a, b) =>
+      a.score - b.score ||
+      Number(b.e.common) - Number(a.e.common) ||
+      a.e.city.localeCompare(b.e.city),
+  );
+
+  return scored.slice(0, limit).map(({ e }) => ({ zone: e.zone, city: e.city, country: e.country }));
+}

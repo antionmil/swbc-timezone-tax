@@ -125,7 +125,7 @@ export function buildVerdict(
       ? `To share ${target} hours, ${parts.join(", or ")}. Somebody pays, and the only question is who.`
       : null;
   } else if (shared < full - 0.01 && shared > 0) {
-    stretch = `You already share ${target} hours or more. That is further than most pairs this far apart ever get.`;
+    stretch = `You share ${niceHours(shared)} of your ${full} hours without either of you moving. Whatever this arrangement costs, it is not the clocks.`;
   }
 
   /* --- the year ----------------------------------------------------------- */
