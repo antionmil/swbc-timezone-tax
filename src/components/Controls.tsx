@@ -59,8 +59,13 @@ export function ZonePicker({
         pick(matches[active].zone);
       }
     } else if (e.key === "Escape") {
+      /* Blur as well as close. Escape alone leaves the field focused while it
+         shows the chosen place again — and the next thing typed is appended
+         to "New York · United States" instead of starting a search, which
+         matches nothing and looks like a broken field. */
       setOpen(false);
       setQuery(null);
+      inputRef.current?.blur();
     }
   };
 
