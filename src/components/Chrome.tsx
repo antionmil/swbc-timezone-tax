@@ -6,7 +6,7 @@ export function Masthead() {
       <Link href="/" className="font-mono text-[11px] tracking-[0.22em] text-accent uppercase">
         Timezone tax
       </Link>
-      <span className="text-[11px] text-muted">day 10 of 26 · onedaybuilt</span>
+      <span className="text-[11px] text-muted">Antoine Koerber</span>
     </header>
   );
 }
@@ -26,9 +26,8 @@ export function Colophon() {
       </p>
       <p>
         <a href="https://onedaybuilt.com" className="text-accent hover:underline">
-          onedaybuilt.com
-        </a>{" "}
-        — one website a day, every day of September.
+          Antoine Koerber
+        </a>
       </p>
     </footer>
   );
